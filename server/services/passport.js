@@ -1,27 +1,76 @@
 require('dotenv').config();
-import User from '../db/models/User.js';
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+const User = require('../db/models/User.js');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const LocalStrategy = require('passport-local');
+const bcrypt = require('bcrypt-as-promised');
 
-passport.serializeUser((user, done) => {
-  done(null, user.id); //passing user.id to done to serialize
+const localOptions = { usernameField: 'email' };
+
+const localLogin = new LocalStrategy(localOptions, async function(
+  email,
+  password,
+  done
+) {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      done(null, false);
+    } else {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        done(null, user);
+      } else {
+        done(null, false);
+      }
+    }
+  } catch (e) {
+    done(e);
+  }
 });
 
-passport.deserializeUser((userId, done) => {
-  User.findById(userId).then(user => {
-    done(null, user); //passing deserialized user object to done
-  });
-});
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.googleClientId,
-      clientSecret: process.env.googleClientSecret,
-      callbackURL: '/auth/google/callback',
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      const user = await User.createOAuthUser('google', profile.id);
+// setup options for jwt strategy
+const jwtOptions = {
+  jwtFromRequest: ExtractJwt.fromHeader('authorization'),
+  secretOrKey: process.env.JWTsecret,
+};
+
+// create jwt strategy
+
+const jwtLogin = new JwtStrategy(jwtOptions, async function(payload, done) {
+  try {
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      done(null, false);
+    } else {
       done(null, user);
     }
-  )
+  } catch (e) {
+    done(e);
+  }
+});
+
+const googleLogin = new GoogleStrategy(
+  {
+    clientID: process.env.googleClientId,
+    clientSecret: process.env.googleClientSecret,
+    callbackURL: '/oauth',
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const user = await User.findOrCreateUser('google', {
+        oauthId: profile.id,
+      });
+      done(null, user);
+    } catch (e) {
+      console.log(e);
+    }
+  }
 );
+
+// tell passport to use this strategy
+passport.use(jwtLogin);
+passport.use(localLogin);
+passport.use(googleLogin);

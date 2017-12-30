@@ -13,6 +13,8 @@
   "dependencies": {
     "axios": "^0.16.2",
     "materialize-css": "^0.99.0",
+    "materialize-social": "^1.0.3",
+    "query-string": "^5.0.1",
     "react": "^16.0.0-alpha.13",
     "react-dom": "^16.0.0-alpha.13",
     "react-redux": "^5.0.5",

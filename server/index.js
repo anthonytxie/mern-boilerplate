@@ -1,5 +1,5 @@
 require('./db/mongoose.js');
-import app from './app';
+const app = require('./app');
 const PORT = process.env.PORT || 1995;
 
 app.listen(PORT, () => {

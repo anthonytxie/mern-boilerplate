@@ -1,13 +1,18 @@
 require('dotenv').config();
-import bodyParser from 'body-parser';
-import express from 'express';
-import indexRouter from './routes/index.js';
+require('./services/passport.js');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const express = require('express');
+const authRouter = require('./routes/authRouter');
+const indexRouter = require('./routes/index');
+
 const app = express();
 
 //Middleware
 app.use(bodyParser.json());
 
 app.use(indexRouter);
+app.use(authRouter);
 
 if (process.env.NODE_ENV === 'production') {
   //express will serve up production assets
@@ -19,4 +24,4 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-export default app;
+module.exports = app;
